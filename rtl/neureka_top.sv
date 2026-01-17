@@ -41,6 +41,10 @@ module neureka_top
   parameter int unsigned PE_H      = NEUREKA_PE_H_DEFAULT,
   parameter int unsigned PE_W      = NEUREKA_PE_W_DEFAULT,
 
+  parameter int unsigned HMR_DELAY  = 1,
+  parameter bit          ENGINE_HMR = 1'b1,
+  parameter bit          CTRL_TMR   = 1'b1,
+
   parameter hci_size_parameter_t `HCI_SIZE_PARAM(tcdm) = '0
 ) (
   // global signals
@@ -55,9 +59,6 @@ module neureka_top
   // periph slave port
   hwpe_ctrl_intf_periph.slave                   periph
 );
-
-  localparam bit ENGINE_HMR = 1'b1;
-  localparam bit CTRL_TMR   = 1'b1;
 
   // signals
   logic enable;
@@ -117,7 +118,8 @@ module neureka_top
   neureka_engine #(
     .PE_H       ( PE_H ),
     .PE_W       ( PE_W ),
-    .HMR        ( ENGINE_HMR  )
+    .HMR        ( ENGINE_HMR ),
+    .HMR_DELAY  ( HMR_DELAY  )
   ) i_engine (
     .clk_i         ( clk_i        ),
     .rst_ni        ( rst_ni       ),
