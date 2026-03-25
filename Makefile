@@ -23,6 +23,7 @@ TESTBENCH ?= tb_neureka
 SYNTHESIS ?= 0
 
 # Paths to folders
+ROOT ?= $(shell pwd)
 mkfile_path    := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 HW_BUILD_DIR      ?= $(mkfile_path)/sim/build
 ifneq (,$(wildcard /etc/iis.version))
@@ -46,6 +47,12 @@ USE_ECC  ?= 1
 fault_inject ?= 0
 vulnerability ?= 0
 
+ifeq ($(SYNTHESIS), 1)
+vsim_flags := +nospecify
+else
+vsim_flags :=
+endif
+
 ifeq ($(vulnerability),1)
 compile_flag  += +define+VULNERABILITY_ANALYSIS
 endif
@@ -54,16 +61,11 @@ endif
 VSIM_INI=$(HW_BUILD_DIR)/modelsim.ini
 VSIM_LIBS=$(HW_BUILD_DIR)/work
 
-GATE_LIB_NAME ?= sc7p5mcpp84_12lpplus_base_slvt_c14
-GATE_LIB_PATH ?= /usr/pack/gf-12-kgf/arm/gf/12lpplus/sc7p5mcpp84_base_slvt_c14/r5p0//questa.dz/2021.2/sc7p5mcpp84_12lpplus_base_slvt_c14
-
 # Build implicit rules
 $(HW_BUILD_DIR):
 	mkdir -p $(HW_BUILD_DIR)
 
 SHELL := /bin/bash
-
-gate_libs = -L sc7p5mcpp84_12lpplus_base_slvt_c14
 
 # Download bender
 sim:
@@ -115,7 +117,7 @@ hw-opt:
 ifeq ($(SYNTHESIS), 0)
 	cd sim; $(QUESTA) vopt +acc=npr -o vopt_tb $(TESTBENCH) -floatparameters+$(TESTBENCH) -work $(HW_BUILD_DIR)/work
 else ifeq ($(SYNTHESIS), 1)
-	cd sim; $(QUESTA) vopt +acc=npr -o vopt_tb $(TESTBENCH) -floatparameters+$(TESTBENCH) -work $(HW_BUILD_DIR)/work $(gate_libs)
+	cd sim; $(QUESTA) vopt +acc=npr+tb_neureka. +noacc=nr+i_dut. -o vopt_tb $(TESTBENCH) -floatparameters+$(TESTBENCH) -work $(HW_BUILD_DIR)/work $(gate_libs)
 endif
 
 hw-compile:
@@ -264,11 +266,14 @@ INC_FLAGS += $(addprefix -I,$(INC_DIRS))
 ACCELERATOR_UPPERCASE := $(shell echo $(ACCELERATOR) | tr [:lower:] [:upper:])
 APP_CFLAGS += -DNNX_ACCELERATOR=\"$(ACCELERATOR)\" -DNNX_$(ACCELERATOR_UPPERCASE) -DNNX_NEUREKA_TESTBENCH -DNNX_NEUREKA_PE_H=$(PE_H) -DNNX_NEUREKA_PE_W=$(PE_W)
 # -DNEUREKA_WEIGHT_SOURCE_WMEM
+APP_CFLAGS += -DRESILIENCE_MODE=$(MODE)
 APP_CFLAGS += $(INC_FLAGS)
 APP_CFLAGS += $(NOPRINT_FLAG)
 
-FAULT_INJECTION_SCRIPT ?= ./fault_injection_utils/neureka_inject_fault.tcl
-VULNERABILITY_ANALYSIS_SCRIPT ?= ./fault_injection_utils/neureka_vulnerability_analysis.tcl
+# Fault injection
+FAULT_INJECTION_UTILS ?= $(ROOT)/fault_injection_utils
+FAULT_INJECTION_SCRIPT ?= $(FAULT_INJECTION_UTILS)/neureka_inject_fault.tcl
+VULNERABILITY_ANALYSIS_SCRIPT ?= $(FAULT_INJECTION_UTILS)/neureka_vulnerability_analysis.tcl
 
 # RISC-V options
 RISCV_PREFIX ?= riscv32-unknown-elf-
@@ -331,33 +336,34 @@ ifeq ($(gui),0)
 ifeq ($(fault_inject),0)
 ifeq ($(vulnerability),0)
 	cd $(BUILD_DIR); \
-	$(QUESTA) vsim -c vopt_tb -do "run -a" \
-	$(VSIM_PARAMS);                        \
+	$(QUESTA) vsim $(vsim_flags) -c vopt_tb -do "run -a" \
+	$(VSIM_PARAMS); \
 	if grep -q 'errors happened' transcript; then exit 1; fi
 else
 	cd $(BUILD_DIR); \
-	$(QUESTA) vsim -c vopt_tb \
-	-do "source ../../$(VULNERABILITY_ANALYSIS_SCRIPT)"  \
+	$(QUESTA) vsim $(vsim_flags) -c vopt_tb \
+	-do "set ROOT $(ROOT); source $(VULNERABILITY_ANALYSIS_SCRIPT)"  \
 	-do "run -a" \
 	$(VSIM_PARAMS)
 endif
 else
-	cd $(BUILD_DIR); $(QUESTA) vsim -c vopt_tb \
-	-do "source ../../$(FAULT_INJECTION_SCRIPT)"  \
-	-do "add log -r /$(TESTBENCH)/*"    \
+	cd $(BUILD_DIR); \
+	$(QUESTA) vsim  $(vsim_flags) -c vopt_tb \
+	-do "set ROOT $(ROOT); source $(FAULT_INJECTION_SCRIPT)"  \
 	-do "run -a" \
-	$(VSIM_PARAMS)
+	$(VSIM_PARAMS); \
+	if grep -q 'errors happened' transcript; then exit 1; fi
 endif
 else
 ifeq ($(fault_inject), 1)
-	cd $(BUILD_DIR); $(QUESTA) vsim vopt_tb \
-	-do "source ../../$(FAULT_INJECTION_SCRIPT)"  \
-	-do "add log -r /$(TESTBENCH)/*"    \
+	cd $(BUILD_DIR); $(QUESTA) vsim $(vsim_flags) vopt_tb \
+	-do "set ROOT $(ROOT); source $(FAULT_INJECTION_SCRIPT)"  \
+	-do "add log -r /$(TESTBENCH)/i_dut/*"    \
 	-do "run -a" \
 	$(VSIM_PARAMS)
 else
-	cd $(BUILD_DIR); $(QUESTA) vsim vopt_tb \
-	-do "add log -r sim:/$(TESTBENCH)/*"    \
+	cd $(BUILD_DIR); $(QUESTA) vsim $(vsim_flags) vopt_tb \
+	-do "add log -r /$(TESTBENCH)/i_dut/*"    \
 	-do "run -a" \
 	$(VSIM_PARAMS)
 endif
