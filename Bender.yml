@@ -5,9 +5,9 @@ package:
     - "Francesco Conti <f.conti@unibo.it>"
 
 dependencies:
-  hwpe-stream:  { git: "https://github.com/pulp-platform/hwpe-stream.git", version: 1.8 }
+  hwpe-stream:  { git: "https://github.com/LuigiGhionda/hwpe-stream.git", rev: "4c676e44ccf70a0d8dc67a84c6e02372bfd22557" }
   hci:          { git: "https://github.com/pulp-platform/hci.git", rev: "38fc2a7"  } # branch: lg/ecc_rebase_v2.1.1
-  hwpe-ctrl:    { git: "https://github.com/pulp-platform/hwpe-ctrl.git", rev: "a596620" }
+  hwpe-ctrl:    { git: "https://github.com/LuigiGhionda/hwpe-ctrl.git", rev: "a0c941416ebfa4e20492888bc5a5708190f9175b" }  
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: 0.3.1 }
   zeroriscy:    { git: "https://github.com/yvantor/ibex.git", rev: "bender", target: "neureka_standalone" } # for verification only
  

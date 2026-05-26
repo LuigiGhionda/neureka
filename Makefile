@@ -150,7 +150,7 @@ hw-all: hw-lib hw-compile hw-opt
 .PHONY: stimuli build-cleanup
 
 PE_H ?= 4
-PE_W ?= 4
+PE_W ?= 2
 FS ?= 1
 ifeq ($(FS), 3)
   H_IN ?= 6
@@ -196,6 +196,8 @@ ifeq ($(NOPRINT), 1)
 else
   NOPRINT_FLAG=
 endif
+
+MODE ?= 0 # MODE 0: PERFORMANCE MODE. MODE 1: RESILIENCE MODE.
 
 # construct build directory
 BUILD_DIR=build/ki$(K_IN)_ko$(K_OUT)_in$(H_IN).$(W_IN)_fs$(FS)_dw$(DW)$(QW_BUILD)_pad$(PADDING_TOP).$(PADDING_RIGHT).$(PADDING_BOTTOM).$(PADDING_LEFT)
